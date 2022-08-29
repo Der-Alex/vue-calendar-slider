@@ -61,6 +61,7 @@ const x = ref(0);
 const lastX = ref(0);
 const posx = ref(0);
 const moved = ref(false);
+const speed = ref(0);
 
 // const currentMonth = computed(() => {
 //   return selectedDate.value.toLocaleDateString('de-DE', { month: 'long' });
@@ -111,73 +112,106 @@ const moveElement = (e) => {
     let newVal = 0;
     if (lastX.value < x.value) {
       newVal = posx.value + (x.value - lastX.value);
+      //console.log('lastx', lastX.value,'x', x.value, x.value - lastX.value );
+      speed.value = x.value - lastX.value;
     } else if (lastX.value > x.value) {
       newVal = posx.value - (lastX.value - x.value);
+      //console.log('lastx', lastX.value,'x', x.value, lastX.value - x.value );
+      speed.value = x.value - lastX.value;
     } else {
       newVal = posx.value;
     }
+    //console.log('speed', speed.value);
     root.value.style.setProperty('--posx', newVal.toString() + 'px');
   }
 };
 
+
+const animateVelocity = (currentSpeed) => {
+  let count = 100;
+  const posx = parseInt(getComputedStyle(root.value).getPropertyValue('--posx').slice(0, -2));
+  console.log('velocity', posx, speed.value);
+
+  // TODO: RAF
+  while (count > 0) {
+    setTimeout(() => {
+      root.value.style.setProperty('--posx', (posx + 10).toString() + 'px');
+      console.log('new posx', getComputedStyle(root.value).getPropertyValue('--posx'));
+      // if (speed.value > 0) {
+      //   speed.value--;
+      // } else if (speed.value < 0) {
+      //   speed.value++
+      // };
+    }, 16);
+    count--;
+
+  }
+};
+
+
 const dragEnd = () => {
   console.log('dragEnd');
   const itemsInContainer = [];
-  for (const item of dateItems.value) {
-    if (
-      (item.getBoundingClientRect().left >=
-        target.value.getBoundingClientRect().left &&
-        item.getBoundingClientRect().left <=
-          target.value.getBoundingClientRect().right) ||
-      (item.getBoundingClientRect().right <=
-        target.value.getBoundingClientRect().right &&
-        item.getBoundingClientRect().right >=
-          target.value.getBoundingClientRect().left)
-    ) {
-      console.log(item);
-      itemsInContainer.push(item);
-    }
-  }
 
-  if (itemsInContainer.length <= 1) {
-    if (posx.value >= 0) {
-      posx.value = 0;
-      selectedDate.value = dates.value[0];
-    } else {
-      console.log(target.value.width, target.value.clientWidth);
-      posx.value = (dateItems.value.length - 1) * target.value.clientWidth * -1;
-      selectedDate.value = dates.value[dates.value.length - 1];
-    }
-  }
+  animateVelocity(speed.value);
 
-  if (itemsInContainer.length === 2) {
-    const item1 =
-      target.value.clientWidth - itemsInContainer[0].getBoundingClientRect().right;
-    const item1Index = dateItems.value.findIndex(
-      (item) => item === itemsInContainer[0]
-    );
-    const item2 =
-      itemsInContainer[1].getBoundingClientRect().left -
-      target.value.getBoundingClientRect().left;
-    const item2Index = dateItems.value.findIndex(
-      (item) => item === itemsInContainer[1]
-    );
-
-    if (item1 <= item2) {
-      posx.value = item1Index * target.value.clientWidth * -1;
-      selectedDate.value = dates.value[item1Index];
-    } else {
-      posx.value = item2Index * target.value.clientWidth * -1;
-      selectedDate.value = dates.value[item2Index];
-    }
-    console.log('POSX', posx.value, selectedDate.value);
-  }
-
-  container.value.classList.add('snap');
-  target.value.classList.add('snap');
-  root.value.style.setProperty('--posx', posx.value.toString() + 'px');
-
-  console.log('items in container', itemsInContainer);
+  //
+  //
+  // for (const item of dateItems.value) {
+  //   if (
+  //     (item.getBoundingClientRect().left >=
+  //       target.value.getBoundingClientRect().left &&
+  //       item.getBoundingClientRect().left <=
+  //         target.value.getBoundingClientRect().right) ||
+  //     (item.getBoundingClientRect().right <=
+  //       target.value.getBoundingClientRect().right &&
+  //       item.getBoundingClientRect().right >=
+  //         target.value.getBoundingClientRect().left)
+  //   ) {
+  //     console.log(item);
+  //     itemsInContainer.push(item);
+  //   }
+  // }
+  //
+  // if (itemsInContainer.length <= 1) {
+  //   if (posx.value >= 0) {
+  //     posx.value = 0;
+  //     selectedDate.value = dates.value[0];
+  //   } else {
+  //     console.log(target.value.width, target.value.clientWidth);
+  //     posx.value = (dateItems.value.length - 1) * target.value.clientWidth * -1;
+  //     selectedDate.value = dates.value[dates.value.length - 1];
+  //   }
+  // }
+  //
+  // if (itemsInContainer.length === 2) {
+  //   const item1 =
+  //     target.value.clientWidth - itemsInContainer[0].getBoundingClientRect().right;
+  //   const item1Index = dateItems.value.findIndex(
+  //     (item) => item === itemsInContainer[0]
+  //   );
+  //   const item2 =
+  //     itemsInContainer[1].getBoundingClientRect().left -
+  //     target.value.getBoundingClientRect().left;
+  //   const item2Index = dateItems.value.findIndex(
+  //     (item) => item === itemsInContainer[1]
+  //   );
+  //
+  //   if (item1 <= item2) {
+  //     posx.value = item1Index * target.value.clientWidth * -1;
+  //     selectedDate.value = dates.value[item1Index];
+  //   } else {
+  //     posx.value = item2Index * target.value.clientWidth * -1;
+  //     selectedDate.value = dates.value[item2Index];
+  //   }
+  //   console.log('POSX', posx.value, selectedDate.value);
+  // }
+  //
+  // container.value.classList.add('snap');
+  // target.value.classList.add('snap');
+  // root.value.style.setProperty('--posx', posx.value.toString() + 'px');
+  //
+  // console.log('items in container', itemsInContainer);
 
   document.onmouseup = null;
   document.onmousemove = null;
