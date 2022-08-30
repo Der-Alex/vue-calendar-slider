@@ -1,39 +1,48 @@
 <template>
-  <div class="vcs-wrapper" :class="wrapperClasses">
-    <div
-      class="vcs-container"
-      :class="containerClasses"
-      @mousedown="dragStart" ref="container"
-    >
+  <div class="foo">
+    <div class="vcs-wrapper" :class="wrapperClasses">
       <div
-        class="vcs-item"
-        :class="itemClasses"
-        v-for="(dateItem, index) in dates"
-        :key="dateItem"
-        ref="dateItems"
-        @mousedown="setCurrentItem(index)"
-        @click.prevent="scrollToId(index)"
+        class="vcs-container"
+        :class="containerClasses"
+        @touchstart="dragStart" ref="container"
+        @mousedown="dragStart"
       >
-        <p class="vcs-text" :class="itemTextClasses">{{ dateItem.toLocaleDateString('de-DE') }}</p>
+        <div
+          class="vcs-item"
+          :class="itemClasses"
+          v-for="(dateItem, index) in dates"
+          :key="dateItem"
+          ref="dateItems"
+          @touchstart="(e) => setCurrentItem(e, index)"
+          @mousedown="(e) => setCurrentItem(e, index)"
+          @touchend="(e) => scrollToId(e, index)"
+          @mouseup="(e) => scrollToId(e, index)"
+        >
+          <p class="vcs-text" :class="itemTextClasses">{{ dateItem.toLocaleDateString('de-DE') }}</p>
+        </div>
+      </div>
+      <div
+        class="vcs-container vcs-target"
+        :class="[containerClasses, targetClasses]"
+        @touchstart="dragStart"
+        @mousedown="dragStart"
+        ref="target"
+      >
+        <div
+          class="vcs-item"
+          :class="[itemClasses, targetItemClasses]"
+          v-for="(dateItem, index) in dates"
+          :key="dateItem"
+        >
+          <span class="vcs-text" :class="[itemTextClasses, targetItemTextClasses]">{{ dateItem.toLocaleDateString('de-DE') }}</span>
+        </div>
       </div>
     </div>
-    <div
-      class="vcs-container vcs-target"
-      :class="[containerClasses, targetClasses]"
-      @mousedown="dragStart"
-      ref="target"
-    >
-      <div
-        class="vcs-item"
-        :class="[itemClasses, targetItemClasses]"
-        v-for="(dateItem, index) in dates"
-        :key="dateItem"
-        @mousedown="setCurrentItem(index)"
-      >
-        <span class="vcs-text" :class="[itemTextClasses, targetItemTextClasses]">{{ dateItem.toLocaleDateString('de-DE') }}</span>
-      </div>
+    <div>
+      <pre>{{ currentEvent }}</pre>
     </div>
   </div>
+
 </template>
 
 <script setup>
@@ -63,24 +72,30 @@ const posx = ref(0);
 const moved = ref(false);
 const speed = ref(0);
 const count = ref(100);
+const currentEvent = ref(null);
 
 // const currentMonth = computed(() => {
 //   return selectedDate.value.toLocaleDateString('de-DE', { month: 'long' });
 // });
 
-const setCurrentItem = (index) => {
+const setCurrentItem = (evt, index) => {
+  console.log('setcurrentitem', evt, index);
   currentBox.value = dateItems.value[index];
-  console.log('currentbox', currentBox.value);
 };
 
 const dragStart = (e) => {
+  console.log('dragstart', e);
   e = e || window.event;
   e.preventDefault();
+  let moveX = e.type === 'mousedown' ? e.clientX : e.touches[0].clientX || e.changedTouches[0].clientX;
+  currentEvent.value = e.type;
   count.value = 100;
   moved.value = false;
-  x.value = e.clientX;
+  x.value = moveX;
   document.onmousemove = moveElement;
   document.onmouseup = dragEnd;
+  document.ontouchmove = moveElement;
+  document.ontouchend = dragEnd;
   posx.value = parseInt(
     getComputedStyle(root.value).getPropertyValue('--posx').slice(0, -2)
   );
@@ -89,7 +104,8 @@ const dragStart = (e) => {
   target.value.classList.remove('snap');
 };
 
-const scrollToId = (index) => {
+const scrollToId = (evt, index) => {
+  currentEvent.value = evt.type;
   if (moved.value) {
     return false;
   } else {
@@ -101,52 +117,80 @@ const scrollToId = (index) => {
   }
 };
 
-const moveElement = (e) => {
-  e = e || window.event;
-  e.preventDefault();
-  moved.value = true;
+const doIt = (e) => {
+  currentEvent.value = e.type;
+  let moveX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX || e.changedTouches[0].clientX;
   if (currentBox.value && currentBox.value.getBoundingClientRect) {
     lastX.value = x.value;
-    x.value = e.clientX;
+    x.value = moveX
     posx.value = parseInt(
       getComputedStyle(root.value).getPropertyValue('--posx').slice(0, -2)
     );
     let newVal = 0;
     if (lastX.value < x.value) {
       newVal = posx.value + (x.value - lastX.value);
-      //console.log('lastx', lastX.value,'x', x.value, x.value - lastX.value );
       speed.value = x.value - lastX.value;
     } else if (lastX.value > x.value) {
       newVal = posx.value - (lastX.value - x.value);
-      //console.log('lastx', lastX.value,'x', x.value, lastX.value - x.value );
       speed.value = x.value - lastX.value;
     } else {
       newVal = posx.value;
     }
-    //console.log('speed', speed.value);
     root.value.style.setProperty('--posx', newVal.toString() + 'px');
   }
 };
 
+const moveElement = (e) => {
+  e = e || window.event;
+  //e.preventDefault();
+  moved.value = true;
+  currentEvent.value = e.type;
+  let moveX = e.type === 'mousemove' ? e.clientX : e.touches[0].clientX || e.changedTouches[0].clientX;
+
+  if (currentBox.value && currentBox.value.getBoundingClientRect) {
+    lastX.value = x.value;
+    x.value = moveX;
+    posx.value = parseInt(
+      getComputedStyle(root.value).getPropertyValue('--posx').slice(0, -2)
+    );
+    let newVal = 0;
+    if (lastX.value < x.value) {
+      newVal = posx.value + (x.value - lastX.value);
+      speed.value = x.value - lastX.value;
+    } else if (lastX.value > x.value) {
+      newVal = posx.value - (lastX.value - x.value);
+      speed.value = x.value - lastX.value;
+    } else {
+      newVal = posx.value;
+    }
+    root.value.style.setProperty('--posx', newVal.toString() + 'px');
+  }
+  //window.requestAnimationFrame((timestamp) => doIt(e));
+};
+
 
 const animateVelocity = (timestamp) => {
-  posx.value = parseInt(getComputedStyle(root.value).getPropertyValue('--posx').slice(0, -2));
-  console.log('velocity', posx.value, speed.value, timestamp);
-  root.value.style.setProperty('--posx', (posx.value + speed.value).toString() + 'px');
-  console.log('new posx', getComputedStyle(root.value).getPropertyValue('--posx'));
-  if (speed.value < -20) {
-    speed.value = -20;
+  if (speed.value <= 1 && speed.value >= -1) {
+    moved.value = false;
+    count.value = 0;
   }
-  if (speed.value > 20) {
-    speed.value = 20;
-  }
-
-  if (count.value > 0) {
-    count.value--;
-    if (count.value < 60) {
-      speed.value *= 0.98;
+  if (moved.value) {
+    posx.value = parseInt(getComputedStyle(root.value).getPropertyValue('--posx').slice(0, -2));
+    root.value.style.setProperty('--posx', (posx.value + speed.value).toString() + 'px');
+    if (speed.value < -20) {
+      speed.value = -20;
     }
-    window.requestAnimationFrame(animateVelocity);
+    if (speed.value > 20) {
+      speed.value = 20;
+    }
+
+    if (count.value > 0) {
+      count.value--;
+      if (count.value < 60) {
+        speed.value *= 0.98;
+      }
+      window.requestAnimationFrame(animateVelocity);
+    }
   }
   if (count.value === 0) {
     const itemsInContainer = [];
@@ -162,19 +206,24 @@ const animateVelocity = (timestamp) => {
           item.getBoundingClientRect().right >=
           target.value.getBoundingClientRect().left)
       ) {
-        console.log(item);
         itemsInContainer.push(item);
       }
     }
 
-    if (itemsInContainer.length <= 1) {
+    if (itemsInContainer.length === 0) {
       if (posx.value >= 0) {
         posx.value = 0;
         selectedDate.value = dates.value[0];
       } else {
-        console.log(target.value.width, target.value.clientWidth);
         posx.value = (dateItems.value.length - 1) * target.value.clientWidth * -1;
         selectedDate.value = dates.value[dates.value.length - 1];
+      }
+    }
+
+    if (itemsInContainer.length === 1) {
+      if (itemsInContainer[0] === dateItems.value[0]) {
+        posx.value = 0;
+        selectedDate.value = dates.value[0];
       }
     }
 
@@ -198,30 +247,31 @@ const animateVelocity = (timestamp) => {
         posx.value = item2Index * target.value.clientWidth * -1;
         selectedDate.value = dates.value[item2Index];
       }
-      console.log('POSX', posx.value, selectedDate.value);
     }
 
     container.value.classList.add('snap');
     target.value.classList.add('snap');
     root.value.style.setProperty('--posx', posx.value.toString() + 'px');
-
-    console.log('items in container', itemsInContainer);
   }
 };
 
 
-const dragEnd = () => {
-  console.log('dragEnd');
+const dragEnd = (e) => {
+  console.log('dragend');
+  currentEvent.value = 'dragend';
+  //lastX.value = x.value;
+  //x.value = e.touches[0].clientX;
   window.requestAnimationFrame(animateVelocity);
 
   document.onmouseup = null;
   document.onmousemove = null;
+  document.ontouchmove = null;
+  document.ontouchend = null;
 };
 
 onMounted(() => {
   root.value.style.setProperty('--posx', '0px');
   let currentDate = new Date(props.startDate);
-  console.log('current date', currentDate, currentDate.getDate());
   while (currentDate <= props.endDate) {
     dates.value.push(currentDate);
     currentDate = new Date(currentDate.setDate(currentDate.getDate() + 1));
@@ -248,6 +298,9 @@ watch(dateItems, newVal => {
   box-sizing: border-box;
 }
 .vcs-wrapper {
+  width: 100%;
+  height: 88px;
+  overflow: hidden;
   position: relative;
 }
 .vcs-container {
@@ -266,6 +319,7 @@ watch(dateItems, newVal => {
   width: 100px;
   height: 32px;
   flex: 1 0 100px;
+  will-change: transform;
   transform: translateX(var(--posx));
 }
 .vcs-text {
