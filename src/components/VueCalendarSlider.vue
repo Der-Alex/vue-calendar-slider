@@ -207,13 +207,6 @@ const animateVelocity = (timestamp) => {
 
     console.log('items in container', itemsInContainer);
   }
-
-      // if (speed.value > 0) {
-      //   speed.value--;
-      // } else if (speed.value < 0) {
-      //   speed.value++
-      // };
-
 };
 
 
