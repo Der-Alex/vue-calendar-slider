@@ -82,7 +82,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, computed, watch } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 
 const props = defineProps({
   startDate: Date,
@@ -112,17 +112,19 @@ const speed = ref(0);
 const count = ref(60);
 const touching = ref(false);
 
-const currentMonth = computed(() => {
-  return selectedDate.value.toLocaleDateString('de-DE', { month: 'long' });
-});
+// Change this variable to false to write the styles directly to the container elements.
+const testCssCustomProperties = ref(false);
 
 const setCurrentItem = (index) => {
+  console.log('setCurrentItem');
   currentBox.value = dateItems.value[index];
 };
 
 const dragStart = (e) => {
   e = e || window.event;
   e.preventDefault();
+  console.log('dragStart');
+
   touching.value = true;
   let moveX =
     e.type === 'mousedown'
@@ -132,8 +134,8 @@ const dragStart = (e) => {
   count.value = 60;
   moved.value = false;
   x.value = moveX;
-  document.onmousemove = moveElement;
-  document.ontouchmove = moveElement;
+  document.onmousemove = (e) => requestAnimationFrame(() => moveElement(e));
+  document.ontouchmove = (e) => requestAnimationFrame(() => moveElement(e));
   document.onmouseup = dragEnd;
   document.ontouchend = dragEnd;
 
@@ -142,15 +144,21 @@ const dragStart = (e) => {
 };
 
 const scrollToId = (index) => {
+  console.log('scrollToId');
   if (moved.value) {
     return false;
   } else {
     posx.value = targetcontainer.value.clientWidth * index * -1;
-    container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
-    target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+
+    if (testCssCustomProperties.value) {
+      root.value.style.setProperty('--posx', `${posx.value}px`);
+    } else {
+      container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+      target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+    }
+
     container.value.classList.add('snap');
     target.value.classList.add('snap');
-
     selectedDate.value = dates.value[index];
   }
 };
@@ -158,6 +166,7 @@ const scrollToId = (index) => {
 const moveElement = (e) => {
   e = e || window.event;
   e.preventDefault();
+  console.log('moveElement');
   let moveX =
     e.type === 'mousemove'
       ? e.clientX
@@ -178,20 +187,31 @@ const moveElement = (e) => {
       newVal = posx.value;
     }
     posx.value = newVal;
-    container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
-    target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+
+    if (testCssCustomProperties.value) {
+      root.value.style.setProperty('--posx', `${posx.value}px`);
+    } else {
+      container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+      target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+    }
   }
 };
 
 const animateVelocity = (timestamp) => {
+  console.log('animate', timestamp);
   if (speed.value <= 1 && speed.value >= -1) {
     moved.value = false;
     count.value = 0;
   }
   if (moved.value) {
     posx.value = posx.value + speed.value;
-    container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
-    target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+
+    if (testCssCustomProperties.value) {
+      root.value.style.setProperty('--posx', `${posx.value}px`);
+    } else {
+      container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+      target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+    }
 
     if (speed.value < -20) {
       speed.value = -20;
@@ -199,7 +219,6 @@ const animateVelocity = (timestamp) => {
     if (speed.value > 20) {
       speed.value = 20;
     }
-
     if (count.value > 0) {
       count.value--;
       if (count.value < 50) {
@@ -210,7 +229,6 @@ const animateVelocity = (timestamp) => {
   }
   if (count.value === 0) {
     const itemsInContainer = [];
-
     for (const item of dateItems.value) {
       if (
         (item.getBoundingClientRect().left >=
@@ -225,7 +243,6 @@ const animateVelocity = (timestamp) => {
         itemsInContainer.push(item);
       }
     }
-
     if (itemsInContainer.length === 0) {
       if (posx.value >= 0) {
         posx.value = 0;
@@ -236,7 +253,6 @@ const animateVelocity = (timestamp) => {
         selectedDate.value = dates.value[dates.value.length - 1];
       }
     }
-
     if (itemsInContainer.length === 1) {
       if (itemsInContainer[0].innerText === dateItems.value[0].innerText) {
         posx.value = 0;
@@ -271,8 +287,12 @@ const animateVelocity = (timestamp) => {
       }
     }
 
-    container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
-    target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+    if (testCssCustomProperties.value) {
+      root.value.style.setProperty('--posx', `${posx.value}px`);
+    } else {
+      container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+      target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+    }
 
     container.value.classList.add('snap');
     target.value.classList.add('snap');
@@ -280,11 +300,10 @@ const animateVelocity = (timestamp) => {
 };
 
 const dragEnd = (e) => {
+  console.log('dragEnd');
   e.preventDefault();
   touching.value = false;
-
   window.requestAnimationFrame(animateVelocity);
-
   document.onmouseup = null;
   document.ontouchend = null;
   document.onmousemove = null;
@@ -292,8 +311,12 @@ const dragEnd = (e) => {
 };
 
 onMounted(() => {
-  container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
-  target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+  if (testCssCustomProperties.value) {
+    root.value.style.setProperty('--posx', `${posx.value}px`);
+  } else {
+    container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+    target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+  }
 
   let currentDate = new Date(props.startDate);
   while (currentDate <= props.endDate) {
@@ -301,6 +324,7 @@ onMounted(() => {
     currentDate = new Date(currentDate.setDate(currentDate.getDate() + 1));
   }
 });
+
 watch(dateItems, (newVal) => {
   if (newVal.length > 0) {
     const d = selectedDate.value.toLocaleDateString('de-DE');
@@ -309,8 +333,13 @@ watch(dateItems, (newVal) => {
     );
     if (index > -1) {
       posx.value = targetcontainer.value.clientWidth * index * -1;
-      container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
-      target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+
+      if (testCssCustomProperties.value) {
+        root.value.style.setProperty('--posx', `${posx.value}px`);
+      } else {
+        container.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+        target.value.style.transform = `translate3d(${posx.value}px, 0, 0)`;
+      }
     }
   }
 });
