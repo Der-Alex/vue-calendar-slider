@@ -265,20 +265,11 @@ const animateVelocity = (timestamp) => {
     }
 
     if (itemsInContainer.length === 2) {
-      const item1 =
-        targetcontainer.value.clientWidth -
-        itemsInContainer[0].getBoundingClientRect().right;
-      const item1Index = dateItems.value.findIndex(
-        (item) => item === itemsInContainer[0]
-      );
-      const item2 =
-        itemsInContainer[1].getBoundingClientRect().left -
-        target.value.getBoundingClientRect().left;
-      const item2Index = dateItems.value.findIndex(
-        (item) => item === itemsInContainer[1]
-      );
-
-      if (item1 <= item2) {
+      const item1 = itemsInContainer[0].getBoundingClientRect().right - targetcontainer.value.getBoundingClientRect().left;
+      const item1Index = dateItems.value.findIndex((item) => item === itemsInContainer[0]);
+      const item2 = targetcontainer.value.getBoundingClientRect().right - itemsInContainer[1].getBoundingClientRect().left;
+      const item2Index = dateItems.value.findIndex((item) => item === itemsInContainer[1]);
+      if (item1 > item2) {
         posx.value = item1Index * targetcontainer.value.clientWidth * -1;
         selectedDate.value = dates.value[item1Index];
       } else {
